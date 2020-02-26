@@ -67,7 +67,6 @@
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/tv_moko_company_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_above="@id/tv_moko_url"

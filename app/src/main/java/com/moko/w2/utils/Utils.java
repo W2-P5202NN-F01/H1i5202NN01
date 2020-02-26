@@ -5,6 +5,11 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 
+import java.util.Arrays;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
+
 /**
  * @Date 2017/12/7 0007
  * @Author wenzheng.liu
@@ -31,6 +36,25 @@ public class Utils {
     }
 
     /**
+     * @Date 2018/1/22
+     * @Author wenzheng.liu
+     * @Description 加密
+     */
+    public static byte[] encrypt(byte[] value, byte[] password) {
+        try {
+            SecretKeySpec key = new SecretKeySpec(password, "AES");// 转换为AES专用密钥
+            Cipher cipher = Cipher.getInstance("AES");// 创建密码器
+            cipher.init(Cipher.ENCRYPT_MODE, key);// 初始化为加密模式的密码器
+            byte[] result = cipher.doFinal(value);// 加密
+            byte[] data = Arrays.copyOf(result, 16);
+            return data;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
      * 手机是否开启位置服务，如果没有开启那么所有app将不能使用定位功能
      */
     public static boolean isLocServiceEnable(Context context) {
@@ -42,4 +66,6 @@ public class Utils {
         }
         return false;
     }
+
+
 }

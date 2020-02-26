@@ -1,52 +1,63 @@
 package com.moko.w2.activity;
 
+import android.app.AlertDialog;
+import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
+import android.support.annotation.IdRes;
 import android.support.v4.content.LocalBroadcastManager;
-import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
-import android.widget.ImageView;
+import android.widget.FrameLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.moko.w2.BeaconConstants;
+import com.moko.support.MokoConstants;
+import com.moko.support.MokoSupport;
+import com.moko.support.entity.ConfigKeyEnum;
+import com.moko.support.entity.OrderType;
+import com.moko.support.entity.SlotFrameTypeEnum;
+import com.moko.support.event.ConnectStatusEvent;
+import com.moko.support.log.LogModule;
+import com.moko.support.task.OrderTask;
+import com.moko.support.task.OrderTaskResponse;
+import com.moko.support.utils.MokoUtils;
+import com.moko.w2.AppConstants;
 import com.moko.w2.R;
-import com.moko.w2.dialog.BeaconAlertDialog;
-import com.moko.w2.entity.BeaconParam;
+import com.moko.w2.dialog.AlertMessageDialog;
+import com.moko.w2.dialog.LoadingMessageDialog;
+import com.moko.w2.entity.ValidParams;
+import com.moko.w2.fragment.DeviceFragment;
+import com.moko.w2.fragment.SettingFragment;
 import com.moko.w2.service.DfuService;
 import com.moko.w2.service.MokoService;
 import com.moko.w2.utils.FileUtils;
 import com.moko.w2.utils.ToastUtils;
-import com.moko.support.MokoConstants;
-import com.moko.support.MokoSupport;
-import com.moko.support.entity.OrderType;
-import com.moko.support.log.LogModule;
-import com.moko.support.task.OrderTask;
-import com.moko.support.utils.MokoUtils;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import no.nordicsemi.android.dfu.DfuLogListener;
 import no.nordicsemi.android.dfu.DfuProgressListener;
 import no.nordicsemi.android.dfu.DfuProgressListenerAdapter;
 import no.nordicsemi.android.dfu.DfuServiceInitiator;
@@ -58,298 +69,49 @@ import no.nordicsemi.android.dfu.DfuServiceListenerHelper;
  * @Description
  * @ClassPath com.moko.w2.activity.DeviceInfoActivity
  */
-public class DeviceInfoActivity extends BaseActivity {
-
+public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnCheckedChangeListener {
     public static final int REQUEST_CODE_SELECT_FIRMWARE = 0x10;
 
-    @Bind(R.id.tv_conn_state)
-    TextView tvConnState;
-    @Bind(R.id.tv_ibeacon_battery)
-    TextView tvIbeaconBattery;
-    @Bind(R.id.tv_ibeacon_uuid)
-    TextView tvIbeaconUuid;
-    @Bind(R.id.tv_ibeacon_major)
-    TextView tvIbeaconMajor;
-    @Bind(R.id.tv_ibeacon_minor)
-    TextView tvIbeaconMinor;
-    @Bind(R.id.tv_ibeacon_measure_power)
-    TextView tvIbeaconMeasurePower;
-    @Bind(R.id.tv_ibeacon_transmission)
-    TextView tvIbeaconTransmission;
-    @Bind(R.id.tv_ibeacon_broadcasting_interval)
-    TextView tvIbeaconBroadcastingInterval;
-    @Bind(R.id.tv_ibeacon_serialID)
-    TextView tvIbeaconSerialID;
-    @Bind(R.id.tv_ibeacon_mac)
-    TextView tvIbeaconMac;
-    @Bind(R.id.tv_ibeacon_device_name)
-    TextView tvIbeaconDeviceName;
-    @Bind(R.id.iv_ibeacon_device_conn_mode)
-    ImageView ivIbeaconDeviceConnMode;
-    @Bind(R.id.view_cover)
-    View viewCover;
-    private MokoService mMokoService;
-    private BeaconParam mBeaconParam;
-
-    private boolean mIsCloseConnectable;
+    @Bind(R.id.frame_container)
+    FrameLayout frameContainer;
+    @Bind(R.id.radioBtn_setting)
+    RadioButton radioBtnSetting;
+    @Bind(R.id.radioBtn_device)
+    RadioButton radioBtnDevice;
+    @Bind(R.id.rg_options)
+    RadioGroup rgOptions;
+    public MokoService mMokoService;
+    @Bind(R.id.tv_title)
+    TextView tvTitle;
+    private FragmentManager fragmentManager;
+    private SettingFragment settingFragment;
+    private DeviceFragment deviceFragment;
+    public String mPassword;
+    public String mDeviceMac;
+    public String mDevicePid;
+    public String mDeviceUUID;
+    public String mDeviceName;
+    private boolean mIsClose;
+    private ValidParams validParams;
+    private int validCount;
+    private boolean mReceiverTag = false;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_info);
         ButterKnife.bind(this);
-        bindService(new Intent(this, MokoService.class), mServiceConnection, BIND_AUTO_CREATE);
-        mBeaconParam = (BeaconParam) getIntent().getSerializableExtra(BeaconConstants.EXTRA_KEY_DEVICE_PARAM);
-        if (mBeaconParam == null) {
-            finish();
-            return;
-        }
-        if (MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-            tvConnState.setText(getString(R.string.device_info_conn_status_disconnect));
-            viewCover.setVisibility(View.GONE);
-        } else {
-            tvConnState.setText(getString(R.string.device_info_conn_status_connect));
-            viewCover.setVisibility(View.VISIBLE);
-        }
-        changeValue();
+        validParams = new ValidParams();
+        mPassword = getIntent().getStringExtra(AppConstants.EXTRA_KEY_PASSWORD);
+        Intent intent = new Intent(this, MokoService.class);
+        bindService(intent, mServiceConnection, BIND_AUTO_CREATE);
+        fragmentManager = getFragmentManager();
+        showDeviceFragment();
+        showSettingFragment();
+        rgOptions.setOnCheckedChangeListener(this);
+        radioBtnSetting.setChecked(true);
+        EventBus.getDefault().register(this);
     }
-
-    private void changeValue() {
-        tvIbeaconBattery.setText(mBeaconParam.battery);
-        tvIbeaconUuid.setText(mBeaconParam.uuid);
-        tvIbeaconMajor.setText(mBeaconParam.major);
-        tvIbeaconMinor.setText(mBeaconParam.minor);
-        tvIbeaconMeasurePower.setText(String.format("-%sdBm", mBeaconParam.measurePower));
-        tvIbeaconTransmission.setText(mBeaconParam.transmission);
-        tvIbeaconBroadcastingInterval.setText(mBeaconParam.broadcastingInterval);
-        tvIbeaconSerialID.setText(mBeaconParam.serialID);
-        tvIbeaconMac.setText(mBeaconParam.iBeaconMAC);
-        tvIbeaconDeviceName.setText(mBeaconParam.iBeaconName);
-        boolean isConnectable = "00".equals(mBeaconParam.connectionMode);
-        ivIbeaconDeviceConnMode.setImageDrawable(ContextCompat.getDrawable(this, isConnectable ? R.drawable.connectable_checked : R.drawable.connectable_unchecked));
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unregisterReceiver(mReceiver);
-        unbindService(mServiceConnection);
-    }
-
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent != null) {
-                String action = intent.getAction();
-                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
-                    int blueState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
-                    switch (blueState) {
-                        case BluetoothAdapter.STATE_TURNING_OFF:
-                        case BluetoothAdapter.STATE_OFF:
-                            tvConnState.setText(getString(R.string.device_info_conn_status_connect));
-                            viewCover.setVisibility(View.VISIBLE);
-                            ToastUtils.showToast(DeviceInfoActivity.this, "Connect Failed");
-                            dismissLoadingProgressDialog();
-                            dismissSyncProgressDialog();
-                            dismissDFUProgressDialog();
-                            final LocalBroadcastManager manager = LocalBroadcastManager.getInstance(DeviceInfoActivity.this);
-                            final Intent abortAction = new Intent(DfuService.BROADCAST_ACTION);
-                            abortAction.putExtra(DfuService.EXTRA_ACTION, DfuService.ACTION_ABORT);
-                            manager.sendBroadcast(abortAction);
-                            break;
-                    }
-                }
-                if (MokoConstants.ACTION_CONNECT_SUCCESS.equals(action)) {
-                    abortBroadcast();
-                    tvConnState.setText(getString(R.string.device_info_conn_status_disconnect));
-                    viewCover.setVisibility(View.GONE);
-                    // 读取全部可读数据
-                    mMokoService.mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mMokoService.getReadableData(mBeaconParam.password);
-                        }
-                    }, 1000);
-                }
-                if (MokoConstants.ACTION_CONNECT_DISCONNECTED.equals(action)) {
-                    abortBroadcast();
-                    tvConnState.setText(getString(R.string.device_info_conn_status_connect));
-                    viewCover.setVisibility(View.VISIBLE);
-                    ToastUtils.showToast(DeviceInfoActivity.this, "Connect Failed");
-                    dismissLoadingProgressDialog();
-                    dismissSyncProgressDialog();
-                }
-                if (MokoConstants.ACTION_RESPONSE_TIMEOUT.equals(action)) {
-                    abortBroadcast();
-                }
-                if (MokoConstants.ACTION_RESPONSE_FINISH.equals(action)) {
-                    abortBroadcast();
-                    mMokoService.mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            dismissLoadingProgressDialog();
-                            dismissSyncProgressDialog();
-                        }
-                    }, 1000);
-
-                }
-                if (MokoConstants.ACTION_RESPONSE_SUCCESS.equals(action)) {
-                    abortBroadcast();
-                    OrderType orderType = (OrderType) intent.getSerializableExtra(MokoConstants.EXTRA_KEY_RESPONSE_ORDER_TYPE);
-                    byte[] value = intent.getByteArrayExtra(MokoConstants.EXTRA_KEY_RESPONSE_VALUE);
-                    int responseType = intent.getIntExtra(MokoConstants.EXTRA_KEY_RESPONSE_TYPE, 0);
-                    switch (orderType) {
-                        case battery:
-                            mBeaconParam.battery = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "";
-                            tvIbeaconBattery.setText(mBeaconParam.battery);
-                            break;
-                        case iBeaconUuid:
-                            // 读取UUID成功
-                            // ToastUtils.showToast(DeviceInfoActivity.this, "读取UUID成功");
-                            String hexString = MokoUtils.bytesToHexString(value).toUpperCase();
-                            if (hexString.length() > 31) {
-                                StringBuilder sb = new StringBuilder();
-                                sb.append(hexString.substring(0, 8));
-                                sb.append("-");
-                                sb.append(hexString.substring(8, 12));
-                                sb.append("-");
-                                sb.append(hexString.substring(12, 16));
-                                sb.append("-");
-                                sb.append(hexString.substring(16, 20));
-                                sb.append("-");
-                                sb.append(hexString.substring(20, 32));
-                                String uuid = sb.toString();
-                                mBeaconParam.uuid = uuid;
-                                tvIbeaconUuid.setText(uuid);
-                                tvIbeaconUuid.setText(mBeaconParam.uuid);
-                            }
-                            break;
-                        case major:
-                            mBeaconParam.major = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "";
-                            tvIbeaconMajor.setText(mBeaconParam.major);
-                            break;
-                        case minor:
-                            mBeaconParam.minor = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "";
-                            tvIbeaconMinor.setText(mBeaconParam.minor);
-                            break;
-                        case measurePower:
-                            mBeaconParam.measurePower = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "";
-                            tvIbeaconMeasurePower.setText(String.format("-%sdBm", mBeaconParam.measurePower));
-                            break;
-                        case transmission:
-                            int transmission = Integer.parseInt(MokoUtils.bytesToHexString(value), 16);
-                            if (transmission == 8) {
-                                transmission = 7;
-                            }
-                            mBeaconParam.transmission = transmission + "";
-                            tvIbeaconTransmission.setText(mBeaconParam.transmission);
-                            break;
-                        case broadcastingInterval:
-                            mBeaconParam.broadcastingInterval = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "";
-                            tvIbeaconBroadcastingInterval.setText(mBeaconParam.broadcastingInterval);
-                            break;
-                        case serialID:
-                            mBeaconParam.serialID = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            tvIbeaconSerialID.setText(mBeaconParam.serialID);
-                            break;
-                        case iBeaconMac:
-                            String hexMac = MokoUtils.bytesToHexString(value);
-                            if (hexMac.length() > 11) {
-                                StringBuilder sb = new StringBuilder();
-                                sb.append(hexMac.substring(0, 2));
-                                sb.append(":");
-                                sb.append(hexMac.substring(2, 4));
-                                sb.append(":");
-                                sb.append(hexMac.substring(4, 6));
-                                sb.append(":");
-                                sb.append(hexMac.substring(6, 8));
-                                sb.append(":");
-                                sb.append(hexMac.substring(8, 10));
-                                sb.append(":");
-                                sb.append(hexMac.substring(10, 12));
-                                String mac = sb.toString().toUpperCase();
-                                mBeaconParam.iBeaconMAC = mac;
-                                mBeaconParam.beaconInfo.iBeaconMac = mac;
-                                tvIbeaconMac.setText(mBeaconParam.iBeaconMAC);
-                            }
-                            break;
-                        case iBeaconName:
-                            mBeaconParam.iBeaconName = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            tvIbeaconDeviceName.setText(mBeaconParam.iBeaconName);
-                            break;
-                        case connectionMode:
-                            if (responseType == OrderTask.RESPONSE_TYPE_READ) {
-                                mBeaconParam.connectionMode = MokoUtils.bytesToHexString(value);
-                                boolean isConnectable = "00".equals(mBeaconParam.connectionMode);
-                                ivIbeaconDeviceConnMode.setImageDrawable(ContextCompat.getDrawable(DeviceInfoActivity.this, isConnectable ? R.drawable.connectable_checked : R.drawable.connectable_unchecked));
-                                if (mIsCloseConnectable && !isConnectable) {
-                                    mIsCloseConnectable = false;
-                                    dismissSyncProgressDialog();
-                                    back();
-                                }
-                            } else {
-                                dismissSyncProgressDialog();
-                                mIsCloseConnectable = true;
-                                mBeaconParam.connectionMode = null;
-                                getEmptyInfo();
-                            }
-                            break;
-                        case firmname:
-                            mBeaconParam.beaconInfo.firmname = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case softVersion:
-                            mBeaconParam.beaconInfo.softVersion = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case devicename:
-                            mBeaconParam.beaconInfo.deviceName = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case iBeaconDate:
-                            mBeaconParam.beaconInfo.iBeaconDate = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case hardwareVersion:
-                            mBeaconParam.beaconInfo.hardwareVersion = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case firmwareVersion:
-                            mBeaconParam.beaconInfo.firmwareVersion = MokoUtils.hex2String(MokoUtils.bytesToHexString(value));
-                            break;
-                        case writeAndNotify:
-                            if ((value[0] & 0xFF) == 0xEB && (value[1] & 0xFF) == 0x59) {
-                                byte[] runtimeBytes = Arrays.copyOfRange(value, 4, value.length);
-                                int seconds = Integer.parseInt(MokoUtils.bytesToHexString(runtimeBytes), 16);
-                                int day = 0, hours = 0, minutes = 0;
-                                day = seconds / (60 * 60 * 24);
-                                seconds -= day * 60 * 60 * 24;
-                                hours = seconds / (60 * 60);
-                                seconds -= hours * 60 * 60;
-                                minutes = seconds / 60;
-                                seconds -= minutes * 60;
-                                mBeaconParam.beaconInfo.runtime = String.format("%dD%dh%dm%ds", day, hours, minutes, seconds);
-                            }
-                            if ((value[0] & 0xFF) == 0xEB && (value[1] & 0xFF) == 0x5B) {
-                                byte[] chipModelBytes = Arrays.copyOfRange(value, 4, value.length);
-                                mBeaconParam.beaconInfo.chipModel = MokoUtils.hex2String(MokoUtils.bytesToHexString(chipModelBytes));
-                            }
-                            if ((value[0] & 0xFF) == 0xEB && (value[1] & 0xFF) == 0x6D) {
-                                if ((value[value.length - 1] & 0xff) == 0xAA) {
-                                    dismissSyncProgressDialog();
-                                    ToastUtils.showToast(DeviceInfoActivity.this, "Power off successfully");
-                                    back();
-                                } else {
-                                    ToastUtils.showToast(DeviceInfoActivity.this, "Power off failed");
-                                }
-                            }
-                            break;
-                        case changePassword:
-                            if ("00".equals(MokoUtils.bytesToHexString(value))) {
-                                changeValue();
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-    };
 
     private ServiceConnection mServiceConnection = new ServiceConnection() {
 
@@ -358,18 +120,35 @@ public class DeviceInfoActivity extends BaseActivity {
             mMokoService = ((MokoService.LocalBinder) service).getService();
             // 注册广播接收器
             IntentFilter filter = new IntentFilter();
-            filter.addAction(MokoConstants.ACTION_CONNECT_SUCCESS);
-            filter.addAction(MokoConstants.ACTION_CONNECT_DISCONNECTED);
-            filter.addAction(MokoConstants.ACTION_RESPONSE_SUCCESS);
-            filter.addAction(MokoConstants.ACTION_RESPONSE_TIMEOUT);
-            filter.addAction(MokoConstants.ACTION_RESPONSE_FINISH);
+            filter.addAction(MokoConstants.ACTION_ORDER_RESULT);
+            filter.addAction(MokoConstants.ACTION_ORDER_TIMEOUT);
+            filter.addAction(MokoConstants.ACTION_ORDER_FINISH);
             filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
             filter.setPriority(200);
             registerReceiver(mReceiver, filter);
+            mReceiverTag = true;
             if (!MokoSupport.getInstance().isBluetoothOpen()) {
                 // 蓝牙未打开，开启蓝牙
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, MokoConstants.REQUEST_CODE_ENABLE_BT);
+                MokoSupport.getInstance().enableBluetooth();
+            } else {
+                if (mMokoService == null) {
+                    finish();
+                    return;
+                }
+                showSyncingProgressDialog();
+                MokoSupport.getInstance().sendOrder(
+                        mMokoService.setConfigNotify(),
+                        mMokoService.getSlotData(),
+                        mMokoService.getRadioTxPower(),
+                        mMokoService.getAdvInterval(),
+                        mMokoService.getBattery(),
+                        mMokoService.getDeviceMac(),
+                        mMokoService.getManufacturer(),
+                        mMokoService.getProductModel(),
+                        mMokoService.getManufacturerDate(),
+                        mMokoService.getHardwareVersion(),
+                        mMokoService.getFirmwareVersion(),
+                        mMokoService.getSoftwareVersion());
             }
         }
 
@@ -377,6 +156,356 @@ public class DeviceInfoActivity extends BaseActivity {
         public void onServiceDisconnected(ComponentName name) {
         }
     };
+
+    @Subscribe(threadMode = ThreadMode.POSTING, priority = 100)
+    public void onConnectStatusEvent(ConnectStatusEvent event) {
+        EventBus.getDefault().cancelEventDelivery(event);
+        final String action = event.getAction();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (MokoConstants.ACTION_CONN_STATUS_DISCONNECTED.equals(action)) {
+                    // 设备断开，通知页面更新
+                    if (mIsClose) {
+                        return;
+                    }
+                    if (MokoSupport.getInstance().isBluetoothOpen() && !isUpgrade) {
+                        AlertMessageDialog dialog = new AlertMessageDialog();
+                        dialog.setTitle("Dismiss");
+                        dialog.setMessage("The device disconnected!");
+                        dialog.setConfirm("Exit");
+                        dialog.setCancelGone();
+                        dialog.setOnAlertConfirmListener(new AlertMessageDialog.OnAlertConfirmListener() {
+                            @Override
+                            public void onClick() {
+                                setResult(RESULT_OK);
+                                finish();
+                            }
+                        });
+                        dialog.show(getSupportFragmentManager());
+                    }
+                }
+                if (MokoConstants.ACTION_DISCOVER_SUCCESS.equals(action)) {
+                    // 设备连接成功，通知页面更新
+                    showSyncingProgressDialog();
+                    mMokoService.mHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            MokoSupport.getInstance().sendOrder(mMokoService.getLockState());
+                        }
+                    }, 1000);
+                }
+            }
+        });
+
+    }
+
+    private void getDeviceInfo() {
+        if (mMokoService == null) {
+            return;
+        }
+        showSyncingProgressDialog();
+        validParams.reset();
+        MokoSupport.getInstance().sendOrder(
+                mMokoService.setConfigNotify(),
+                mMokoService.getSlotData(),
+                mMokoService.getRadioTxPower(),
+                mMokoService.getAdvInterval(),
+                mMokoService.getBattery(),
+                mMokoService.getDeviceMac(),
+                mMokoService.getManufacturer(),
+                mMokoService.getProductModel(),
+                mMokoService.getManufacturerDate(),
+                mMokoService.getHardwareVersion(),
+                mMokoService.getFirmwareVersion(),
+                mMokoService.getSoftwareVersion());
+    }
+
+    private String unLockResponse;
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (intent != null) {
+                String action = intent.getAction();
+                if (!BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                    abortBroadcast();
+                }
+                if (MokoConstants.ACTION_ORDER_TIMEOUT.equals(action)) {
+                }
+                if (MokoConstants.ACTION_ORDER_FINISH.equals(action)) {
+                    dismissSyncProgressDialog();
+                    if (validParams.isEmpty() && validCount < 2) {
+                        validCount++;
+                        getDeviceInfo();
+                    } else {
+                        validCount = 0;
+                    }
+                }
+                if (MokoConstants.ACTION_ORDER_RESULT.equals(action)) {
+                    OrderTaskResponse response = (OrderTaskResponse) intent.getSerializableExtra(MokoConstants.EXTRA_KEY_RESPONSE_ORDER_TASK);
+                    OrderType orderType = response.orderType;
+                    int responseType = response.responseType;
+                    byte[] value = response.responseValue;
+                    switch (orderType) {
+                        case writeConfig:
+                            if (value.length >= 2) {
+                                int key = value[1] & 0xff;
+                                ConfigKeyEnum configKeyEnum = ConfigKeyEnum.fromConfigKey(key);
+                                if (configKeyEnum == null) {
+                                    return;
+                                }
+                                switch (configKeyEnum) {
+                                    case GET_DEVICE_MAC:
+                                        if (value.length >= 10) {
+                                            String valueStr = MokoUtils.bytesToHexString(value);
+                                            String mac = valueStr.substring(valueStr.length() - 12).toUpperCase();
+                                            String macShow = String.format("%s:%s:%s:%s:%s:%s", mac.substring(0, 2), mac.substring(2, 4), mac.substring(4, 6), mac.substring(6, 8), mac.substring(8, 10), mac.substring(10, 12));
+                                            deviceFragment.setDeviceMac(macShow);
+                                            mDeviceMac = macShow;
+                                            validParams.mac = macShow;
+                                        }
+                                        break;
+                                    case GET_RUNNING_TIME:
+                                        if (value.length >= 7) {
+                                            byte[] runningTime = Arrays.copyOfRange(value, 3, value.length - 1);
+                                            deviceFragment.setRunningTime(runningTime);
+                                            validParams.runningTime = "1";
+                                        }
+                                        break;
+                                }
+                            }
+                            break;
+                        case manufacturer:
+                            deviceFragment.setManufacturer(value);
+                            validParams.manufacture = "1";
+                            break;
+                        case productModel:
+                            deviceFragment.setDeviceModel(value);
+                            validParams.productModel = "1";
+                            break;
+                        case manufactureDate:
+                            deviceFragment.setProductDate(value);
+                            validParams.manufactureDate = "1";
+                            break;
+                        case hardwareVersion:
+                            deviceFragment.setHardwareVersion(value);
+                            validParams.hardwareVersion = "1";
+                            break;
+                        case firmwareVersion:
+                            deviceFragment.setFirmwareVersion(value);
+                            validParams.firmwareVersion = "1";
+                            break;
+                        case softwareVersion:
+                            deviceFragment.setSoftwareVersion(value);
+                            validParams.softwareVersion = "1";
+                            break;
+                        case battery:
+                            deviceFragment.setBattery(value);
+                            validParams.battery = "1";
+                            break;
+                        case advSlotData:
+                            if (responseType == OrderTask.RESPONSE_TYPE_READ) {
+                                if (value.length >= 1) {
+                                    int frameType = value[0];
+                                    SlotFrameTypeEnum slotFrameTypeEnum = SlotFrameTypeEnum.fromFrameType(frameType);
+                                    if (slotFrameTypeEnum != null) {
+                                        switch (slotFrameTypeEnum) {
+                                            case PID:
+                                                String uuid = MokoUtils.bytesToHexString(Arrays.copyOfRange(value, 1, 17));
+                                                String pid = MokoUtils.bytesToHexString(Arrays.copyOfRange(value, 17, value.length));
+                                                StringBuilder stringBuilder = new StringBuilder(uuid);
+                                                stringBuilder.insert(8, "-");
+                                                stringBuilder.insert(13, "-");
+                                                stringBuilder.insert(18, "-");
+                                                stringBuilder.insert(23, "-");
+                                                // 设置
+                                                mDeviceUUID = uuid;
+                                                settingFragment.setUUID(stringBuilder.toString());
+
+                                                mDevicePid = pid;
+                                                settingFragment.setPid(new String(Arrays.copyOfRange(value, 17, value.length)));
+
+                                                validParams.uuidAndPid = "1";
+                                                break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (responseType == OrderTask.RESPONSE_TYPE_WRITE) {
+                                ToastUtils.showToast(DeviceInfoActivity.this, "Successfully configure");
+                            }
+                            break;
+                        case radioTxPower:
+                            if (responseType == OrderTask.RESPONSE_TYPE_READ) {
+                                if (value.length >= 1) {
+                                    int txPower = value[0];
+                                    settingFragment.setTxPower(String.format("%ddBm", txPower));
+                                    validParams.txPower = "1";
+                                }
+                            }
+                            if (responseType == OrderTask.RESPONSE_TYPE_WRITE) {
+                                ToastUtils.showToast(DeviceInfoActivity.this, "Successfully configure");
+                            }
+                            break;
+                        case advInterval:
+                            if (responseType == OrderTask.RESPONSE_TYPE_READ) {
+                                if (value.length >= 2) {
+                                    int advInterval = MokoUtils.toInt(value);
+                                    settingFragment.setAdvInterval(String.format("%dms", advInterval));
+                                    validParams.advInterval = "1";
+                                }
+                            }
+                            if (responseType == OrderTask.RESPONSE_TYPE_WRITE) {
+                                ToastUtils.showToast(DeviceInfoActivity.this, "Successfully configure");
+                            }
+                            break;
+                        case lockState:
+                            String valueStr = MokoUtils.bytesToHexString(value);
+                            if (responseType == OrderTask.RESPONSE_TYPE_WRITE) {
+                                if ("eb63000100".equals(valueStr.toLowerCase())) {
+                                    // 设备上锁
+                                    if (isModifyPassword) {
+                                        isModifyPassword = false;
+                                        dismissSyncProgressDialog();
+                                        AlertMessageDialog dialog = new AlertMessageDialog();
+                                        dialog.setMessage("Password changed successfully! Please reconnect the Device.");
+                                        dialog.setCancelGone();
+                                        dialog.setOnAlertConfirmListener(new AlertMessageDialog.OnAlertConfirmListener() {
+                                            @Override
+                                            public void onClick() {
+                                                DeviceInfoActivity.this.setResult(DeviceInfoActivity.this.RESULT_OK);
+                                                back();
+                                            }
+                                        });
+                                        dialog.show(getSupportFragmentManager());
+                                    }
+                                }
+                            }
+                            break;
+                        case unLock:
+                            if (responseType == OrderTask.RESPONSE_TYPE_READ) {
+                                unLockResponse = MokoUtils.bytesToHexString(value);
+                                LogModule.i("返回的随机数：" + unLockResponse);
+                                MokoSupport.getInstance().sendOrder(mMokoService.setConfigNotify(), mMokoService.setUnLock(mPassword, value));
+                            }
+                            if (responseType == OrderTask.RESPONSE_TYPE_WRITE) {
+                                MokoSupport.getInstance().sendOrder(mMokoService.getLockState());
+                            }
+                            break;
+                        case resetDevice:
+                            ToastUtils.showToast(DeviceInfoActivity.this, "Reset successfully!");
+                            break;
+                    }
+                    if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                        int blueState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
+                        switch (blueState) {
+                            case BluetoothAdapter.STATE_TURNING_OFF:
+                                dismissSyncProgressDialog();
+                                AlertDialog.Builder builder = new AlertDialog.Builder(DeviceInfoActivity.this);
+                                builder.setTitle("Dismiss");
+                                builder.setCancelable(false);
+                                builder.setMessage("The current system of bluetooth is not available!");
+                                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        back();
+                                    }
+                                });
+                                builder.show();
+                                break;
+                            case BluetoothAdapter.STATE_TURNING_ON:
+                                if (mMokoService == null) {
+                                    return;
+                                }
+                                showSyncingProgressDialog();
+                                MokoSupport.getInstance().sendOrder(
+                                        mMokoService.setConfigNotify(),
+                                        mMokoService.getSlotData(),
+                                        mMokoService.getRadioTxPower(),
+                                        mMokoService.getAdvInterval(),
+                                        mMokoService.getBattery(),
+                                        mMokoService.getDeviceMac(),
+                                        mMokoService.getManufacturer(),
+                                        mMokoService.getProductModel(),
+                                        mMokoService.getManufacturerDate(),
+                                        mMokoService.getHardwareVersion(),
+                                        mMokoService.getFirmwareVersion(),
+                                        mMokoService.getSoftwareVersion());
+                                break;
+
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_SELECT_FIRMWARE) {
+            if (resultCode == RESULT_OK) {
+                //得到uri，后面就是将uri转化成file的过程。
+                Uri uri = data.getData();
+                String firmwareFilePath = FileUtils.getPath(this, uri);
+                //
+                final File firmwareFile = new File(firmwareFilePath);
+                if (firmwareFile.exists()) {
+                    final DfuServiceInitiator starter = new DfuServiceInitiator(mDeviceMac)
+                            .setDeviceName(mDeviceName)
+                            .setKeepBond(false)
+                            .setDisableNotification(true);
+                    starter.setZip(null, firmwareFilePath);
+                    starter.start(this, DfuService.class);
+                    showDFUProgressDialog("Waiting...");
+                } else {
+                    Toast.makeText(this, "file is not exists!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mReceiverTag) {
+            mReceiverTag = false;
+            // 注销广播
+            unregisterReceiver(mReceiver);
+        }
+        unbindService(mServiceConnection);
+        EventBus.getDefault().unregister(this);
+    }
+
+    private LoadingMessageDialog mLoadingMessageDialog;
+
+    public void showSyncingProgressDialog() {
+        mLoadingMessageDialog = new LoadingMessageDialog();
+        mLoadingMessageDialog.setMessage("Syncing..");
+        mLoadingMessageDialog.show(getSupportFragmentManager());
+
+    }
+
+    public void dismissSyncProgressDialog() {
+        if (mLoadingMessageDialog != null)
+            mLoadingMessageDialog.dismissAllowingStateLoss();
+    }
+
+    @OnClick({R.id.tv_back})
+    public void onViewClicked(View view) {
+        switch (view.getId()) {
+            case R.id.tv_back:
+                back();
+                break;
+        }
+    }
+
+    private void back() {
+        MokoSupport.getInstance().disConnectBle();
+        mIsClose = false;
+    }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -387,325 +516,98 @@ public class DeviceInfoActivity extends BaseActivity {
         return super.onKeyDown(keyCode, event);
     }
 
-    private void back() {
-        if (MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-            MokoSupport.getInstance().disConnectBle();
+    private void showSettingFragment() {
+        if (settingFragment == null) {
+            settingFragment = SettingFragment.newInstance();
+            fragmentManager.beginTransaction().add(R.id.frame_container, settingFragment).commit();
+        } else {
+            fragmentManager.beginTransaction().hide(deviceFragment).show(settingFragment).commit();
         }
-        finish();
+        tvTitle.setText(getString(R.string.setting_title));
     }
 
+    private void showDeviceFragment() {
+        if (deviceFragment == null) {
+            deviceFragment = DeviceFragment.newInstance();
+            fragmentManager.beginTransaction().add(R.id.frame_container, deviceFragment).commit();
+        } else {
+            fragmentManager.beginTransaction().hide(settingFragment).show(deviceFragment).commit();
+        }
+        tvTitle.setText(getString(R.string.device_title));
+    }
 
-    @OnClick({R.id.tv_back, R.id.tv_conn_state, R.id.rl_ibeacon_battery, R.id.rl_ibeacon_uuid,
-            R.id.rl_ibeacon_major, R.id.rl_ibeacon_minor, R.id.rl_ibeacon_measure_power,
-            R.id.rl_ibeacon_transmission, R.id.rl_ibeacon_broadcasting_interval, R.id.rl_ibeacon_serialID,
-            R.id.rl_ibeacon_mac, R.id.rl_ibeacon_device_name, R.id.iv_ibeacon_device_conn_mode,
-            R.id.rl_ibeacon_change_password, R.id.rl_ibeacon_device_info,
-            R.id.rl_ibeacon_dfu, R.id.rl_ibeacon_adv_period, R.id.rl_ibeacon_wake_up_interval, R.id.rl_ibeacon_sleep_duration,
-            R.id.view_cover, R.id.iv_ibeacon_device_power})
-    public void onClick(View view) {
-        Intent intent;
-        switch (view.getId()) {
-            case R.id.view_cover:
-                ToastUtils.showToast(this, R.string.disconnect_alert);
+    @Override
+    public void onCheckedChanged(RadioGroup group, @IdRes int checkedId) {
+        switch (checkedId) {
+            case R.id.radioBtn_setting:
+                showSettingFragment();
+                getDeviceInfo();
                 break;
-            case R.id.tv_back:
-                back();
-                break;
-            case R.id.tv_conn_state:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    showLoadingProgressDialog(getString(R.string.dialog_connecting));
-                    tvConnState.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mMokoService.connDevice(mBeaconParam.iBeaconMAC);
-                        }
-                    }, 2000);
-                } else {
-                    tvConnState.setText(getString(R.string.device_info_conn_status_connect));
-                    MokoSupport.getInstance().disConnectBle();
-                    viewCover.setVisibility(View.VISIBLE);
-                }
-                break;
-            case R.id.rl_ibeacon_uuid:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetUUIDActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_UUID, mBeaconParam.uuid);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_UUID);
-                break;
-            case R.id.rl_ibeacon_major:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetMajorActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_MAJOR, Integer.parseInt(mBeaconParam.major));
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_MAJOR);
-                break;
-            case R.id.rl_ibeacon_minor:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetMinorActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_MINOR, Integer.parseInt(mBeaconParam.minor));
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_MINOR);
-                break;
-            case R.id.rl_ibeacon_measure_power:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetMeasurePowerActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_MEASURE_POWER, Integer.parseInt(mBeaconParam.measurePower));
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_MEASURE_POWER);
-                break;
-            case R.id.rl_ibeacon_transmission:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetTransmissionActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_TRANSMISSION, Integer.parseInt(mBeaconParam.transmission));
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_TRANSMISSION);
-                break;
-            case R.id.rl_ibeacon_broadcasting_interval:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetBroadcastIntervalActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_BROADCASTINTERVAL, Integer.parseInt(mBeaconParam.broadcastingInterval));
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_BROADCASTINTERVAL);
-                break;
-            case R.id.rl_ibeacon_serialID:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetDeviceIdActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_DEVICE_ID, mBeaconParam.serialID);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_DEVICE_ID);
-                break;
-            case R.id.rl_ibeacon_device_name:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetIBeaconNameActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_IBEACON_NAME, mBeaconParam.iBeaconName);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_IBEACON_NAME);
-                break;
-            case R.id.iv_ibeacon_device_conn_mode:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                final boolean isConnectable = "00".equals(mBeaconParam.connectionMode);
-                final BeaconAlertDialog connectAlertDialog = new BeaconAlertDialog(this);
-                connectAlertDialog.setData(isConnectable ? "Are you sure to make device disconnectable?" : "Are you sure to make device connectable?");
-                connectAlertDialog.setConnectAlertClickListener(new BeaconAlertDialog.ConnectAlertClickListener() {
-                    @Override
-                    public void onEnsureClicked() {
-                        showSyncProgressDialog("Syncing...");
-                        String connectMode = !isConnectable ? "00" : "01";
-                        mMokoService.sendOrder(mMokoService.setConnectionMode(connectMode));
-                    }
-
-                    @Override
-                    public void onDismiss() {
-
-                    }
-                });
-                connectAlertDialog.show();
-                break;
-            case R.id.rl_ibeacon_change_password:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetPasswordActivity.class);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_PASSWORD);
-                break;
-            case R.id.rl_ibeacon_device_info:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SystemInfoActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_INFO, mBeaconParam.beaconInfo);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_SYSTEM_INFO);
-                break;
-            case R.id.rl_ibeacon_mac:
-                ToastUtils.showToast(this, getString(R.string.device_info_cannot_modify));
-                break;
-            case R.id.rl_ibeacon_battery:
-                ToastUtils.showToast(this, getString(R.string.device_info_cannot_modify));
-                break;
-            case R.id.iv_ibeacon_device_power:
-                final BeaconAlertDialog powerAlertDialog = new BeaconAlertDialog(this);
-                powerAlertDialog.setData("Are you sure to turn off the device?Please make sure the device has a button to turn on!");
-                powerAlertDialog.setConnectAlertClickListener(new BeaconAlertDialog.ConnectAlertClickListener() {
-                    @Override
-                    public void onEnsureClicked() {
-                        showSyncProgressDialog("Syncing...");
-                        mMokoService.sendOrder(mMokoService.closeDevice());
-                    }
-
-                    @Override
-                    public void onDismiss() {
-
-                    }
-                });
-                powerAlertDialog.show();
-                break;
-            case R.id.rl_ibeacon_dfu:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                try {
-                    startActivityForResult(Intent.createChooser(intent, "select file first!"), REQUEST_CODE_SELECT_FIRMWARE);
-                } catch (ActivityNotFoundException ex) {
-                    ToastUtils.showToast(this, "install file manager app");
-                }
-                break;
-            case R.id.rl_ibeacon_adv_period:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetAdvPeriodActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_ADV_PERIOD, mBeaconParam.advPeriod);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_ADV_PERIOD);
-                break;
-            case R.id.rl_ibeacon_wake_up_interval:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetWakeUpIntervalActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_WAKE_UP_INTERVAL, mBeaconParam.wakeupInterval);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_WAKE_UP_INTERVAL);
-                break;
-            case R.id.rl_ibeacon_sleep_duration:
-                if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                    ToastUtils.showToast(this, "bluetooth is closed,please open");
-                    return;
-                }
-                if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                    ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                    return;
-                }
-                intent = new Intent(this, SetSleepDurationActivity.class);
-                intent.putExtra(BeaconConstants.EXTRA_KEY_DEVICE_SLEEP_DURATION, mBeaconParam.sleepDuration);
-                startActivityForResult(intent, BeaconConstants.REQUEST_CODE_SET_SLEEP_DURATION);
+            case R.id.radioBtn_device:
+                showDeviceFragment();
+                getDeviceInfo();
                 break;
         }
     }
 
-    private ProgressDialog mLoadingDialog;
+    private boolean isModifyPassword;
 
-    private void showLoadingProgressDialog(String tips) {
-        mLoadingDialog = new ProgressDialog(DeviceInfoActivity.this);
-        mLoadingDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        mLoadingDialog.setCanceledOnTouchOutside(false);
-        mLoadingDialog.setCancelable(false);
-        mLoadingDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        mLoadingDialog.setMessage(tips);
-        if (!isFinishing() && mLoadingDialog != null && !mLoadingDialog.isShowing()) {
-            mLoadingDialog.show();
-        }
+    public void modifyPassword(String password) {
+        isModifyPassword = true;
+        showSyncingProgressDialog();
+        MokoSupport.getInstance().sendOrder(mMokoService.setLockState(password));
     }
 
-    private void dismissLoadingProgressDialog() {
-        if (!isFinishing() && mLoadingDialog != null && mLoadingDialog.isShowing()) {
-            mLoadingDialog.dismiss();
-        }
+    public void resetDevice() {
+        showSyncingProgressDialog();
+        MokoSupport.getInstance().sendOrder(mMokoService.resetDevice());
     }
 
-    private ProgressDialog mSyncingDialog;
-
-    private void showSyncProgressDialog(String tips) {
-        mSyncingDialog = new ProgressDialog(DeviceInfoActivity.this);
-        mSyncingDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        mSyncingDialog.setCanceledOnTouchOutside(false);
-        mSyncingDialog.setCancelable(false);
-        mSyncingDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        mSyncingDialog.setMessage(tips);
-        if (!isFinishing() && mSyncingDialog != null && !mSyncingDialog.isShowing()) {
-            mSyncingDialog.show();
-        }
+    public void setClose() {
+        mIsClose = true;
+        showSyncingProgressDialog();
+        MokoSupport.getInstance().sendOrder(mMokoService.closeDevice());
     }
 
-    private void dismissSyncProgressDialog() {
-        if (!isFinishing() && mSyncingDialog != null && mSyncingDialog.isShowing()) {
-            mSyncingDialog.dismiss();
+    public void setPid(String pid) {
+        validParams.uuidAndPid = "";
+        showSyncingProgressDialog();
+        String pidHex = MokoUtils.string2Hex(pid);
+        String paramsHex = SlotFrameTypeEnum.PID.getFrameType() + mDeviceUUID + pidHex;
+        byte[] paramsBytes = MokoUtils.hex2bytes(paramsHex);
+        MokoSupport.getInstance().sendOrder(mMokoService.setSlotData(paramsBytes));
+    }
+
+    public void setUUID(String uuid) {
+        validParams.uuidAndPid = "";
+        showSyncingProgressDialog();
+        String paramsHex = SlotFrameTypeEnum.PID.getFrameType() + uuid + mDevicePid;
+        byte[] paramsBytes = MokoUtils.hex2bytes(paramsHex);
+        MokoSupport.getInstance().sendOrder(mMokoService.setSlotData(paramsBytes));
+    }
+
+    public void setTxPower(int txPower) {
+        validParams.txPower = "";
+        showSyncingProgressDialog();
+        byte[] txPowerBytes = MokoUtils.toByteArray(txPower, 1);
+        MokoSupport.getInstance().sendOrder(mMokoService.setRadioTxPower(txPowerBytes));
+    }
+
+    public void setAdvInterval(int advInterval) {
+        validParams.advInterval = "";
+        showSyncingProgressDialog();
+        byte[] advIntervalBytes = MokoUtils.toByteArray(advInterval * 100, 2);
+        MokoSupport.getInstance().sendOrder(mMokoService.setAdvInterval(advIntervalBytes));
+    }
+
+    public void chooseFirmwareFile() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(Intent.createChooser(intent, "select file first!"), REQUEST_CODE_SELECT_FIRMWARE);
+        } catch (ActivityNotFoundException ex) {
+            ToastUtils.showToast(this, "install file manager app");
         }
     }
 
@@ -728,223 +630,34 @@ public class DeviceInfoActivity extends BaseActivity {
         if (!isFinishing() && mDFUDialog != null && mDFUDialog.isShowing()) {
             mDFUDialog.dismiss();
         }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == BeaconConstants.RESULT_CONN_DISCONNECTED) {
-            tvConnState.setText(getString(R.string.device_info_conn_status_connect));
-            viewCover.setVisibility(View.VISIBLE);
-        } else {
-            switch (requestCode) {
-                case BeaconConstants.REQUEST_CODE_SET_UUID:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.uuid = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_MAJOR:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.major = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_MINOR:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.minor = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_MEASURE_POWER:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.measurePower = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_TRANSMISSION:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.transmission = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_BROADCASTINTERVAL:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.broadcastingInterval = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_DEVICE_ID:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.serialID = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_IBEACON_NAME:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.iBeaconName = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_CONNECTION_MODE:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.connectionMode = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_ADV_PERIOD:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.advPeriod = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_WAKE_UP_INTERVAL:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.wakeupInterval = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_SLEEP_DURATION:
-                    if (resultCode == RESULT_OK) {
-                        mBeaconParam.sleepDuration = null;
-                    }
-                    break;
-                case BeaconConstants.REQUEST_CODE_SET_PASSWORD:
-                    if (resultCode == RESULT_OK) {
-                        if (data != null && data.getExtras() != null) {
-                            String password = data.getExtras().getString(BeaconConstants.EXTRA_KEY_DEVICE_PASSWORD);
-                            mBeaconParam.password = password;
-                            back();
-                        }
-                        return;
-                    }
-                case REQUEST_CODE_SELECT_FIRMWARE:
-                    if (resultCode == RESULT_OK) {
-                        if (!MokoSupport.getInstance().isConnDevice(this, mBeaconParam.iBeaconMAC)) {
-                            ToastUtils.showToast(this, getString(R.string.alert_click_reconnect));
-                            return;
-                        }
-                        //得到uri，后面就是将uri转化成file的过程。
-                        Uri uri = data.getData();
-                        String firmwareFilePath = FileUtils.getPath(this, uri);
-                        //
-                        final File firmwareFile = new File(firmwareFilePath);
-                        if (firmwareFile.exists()) {
-                            final DfuServiceInitiator starter = new DfuServiceInitiator(mBeaconParam.iBeaconMAC)
-                                    .setDeviceName(mBeaconParam.iBeaconName)
-                                    .setKeepBond(false)
-                                    .setDisableNotification(true);
-                            starter.setZip(null, firmwareFilePath);
-                            starter.start(this, DfuService.class);
-                            showDFUProgressDialog("Waiting...");
-                        } else {
-                            Toast.makeText(this, "file is not exists!", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                    break;
+        AlertDialog.Builder builder = new AlertDialog.Builder(DeviceInfoActivity.this);
+        builder.setTitle("Dismiss");
+        builder.setCancelable(false);
+        builder.setMessage("The device disconnected!");
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                isUpgrade = false;
+                back();
             }
-            getEmptyInfo();
-        }
-
-    }
-
-    /**
-     * Get the value of the data column for this Uri. This is useful for
-     * MediaStore Uris, and other file-based ContentProviders.
-     *
-     * @param context       The context.
-     * @param uri           The Uri to query.
-     * @param selection     (Optional) Filter used in the query.
-     * @param selectionArgs (Optional) Selection arguments used in the query.
-     * @return The value of the _data column, which is typically a file path.
-     */
-    public static String getDataColumn(Context context, Uri uri, String selection,
-                                       String[] selectionArgs) {
-
-        Cursor cursor = null;
-        final String column = "_data";
-        final String[] projection = {column};
-
-        try {
-            cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs,
-                    null);
-            if (cursor != null && cursor.moveToFirst()) {
-                final int column_index = cursor.getColumnIndexOrThrow(column);
-                return cursor.getString(column_index);
-            }
-        } finally {
-            if (cursor != null)
-                cursor.close();
-        }
-        return null;
-    }
-
-    private void getEmptyInfo() {
-        final ArrayList<OrderTask> orderTasks = new ArrayList<>();
-
-        if (TextUtils.isEmpty(mBeaconParam.battery)) {
-            orderTasks.add(mMokoService.getBattery());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.uuid)) {
-            orderTasks.add(mMokoService.getIBeaconUuid());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.major)) {
-            orderTasks.add(mMokoService.getMajor());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.minor)) {
-            orderTasks.add(mMokoService.getMinor());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.measurePower)) {
-            orderTasks.add(mMokoService.getMeasurePower());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.transmission)) {
-            orderTasks.add(mMokoService.getTransmission());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.broadcastingInterval)) {
-            orderTasks.add(mMokoService.getBroadcastingInterval());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.serialID)) {
-            orderTasks.add(mMokoService.getSerialID());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.iBeaconName)) {
-            orderTasks.add(mMokoService.getIBeaconName());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.iBeaconMAC)) {
-            orderTasks.add(mMokoService.getIBeaconMac());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.connectionMode)) {
-            orderTasks.add(mMokoService.getConnectionMode());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.advPeriod)) {
-            orderTasks.add(mMokoService.getAdvPeriod());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.wakeupInterval)) {
-            orderTasks.add(mMokoService.getWakeUpInterval());
-        }
-        if (TextUtils.isEmpty(mBeaconParam.sleepDuration)) {
-            orderTasks.add(mMokoService.getSleepDuration());
-        }
-        if (!orderTasks.isEmpty()) {
-            if (!MokoSupport.getInstance().isBluetoothOpen()) {
-                ToastUtils.showToast(this, "bluetooth is closed,please open");
-                return;
-            }
-            showSyncProgressDialog("Syncing...");
-            mMokoService.mHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    for (OrderTask ordertask : orderTasks) {
-                        mMokoService.sendOrder(mMokoService.setOvertime(), ordertask);
-                    }
-                }
-            }, 1000);
-        }
+        });
+        builder.show();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         DfuServiceListenerHelper.registerProgressListener(this, mDfuProgressListener);
-        DfuServiceListenerHelper.registerLogListener(this, mDfuLogListener);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         DfuServiceListenerHelper.unregisterProgressListener(this, mDfuProgressListener);
-        DfuServiceListenerHelper.unregisterLogListener(this, mDfuLogListener);
     }
 
     private int mDeviceConnectCount;
+    private boolean isUpgrade;
 
     private final DfuProgressListener mDfuProgressListener = new DfuProgressListenerAdapter() {
         @Override
@@ -968,6 +681,7 @@ public class DeviceInfoActivity extends BaseActivity {
 
         @Override
         public void onDfuProcessStarting(String deviceAddress) {
+            isUpgrade = true;
             mDFUDialog.setMessage("DfuProcessStarting...");
         }
 
@@ -984,7 +698,7 @@ public class DeviceInfoActivity extends BaseActivity {
 
         @Override
         public void onDfuCompleted(String deviceAddress) {
-            Toast.makeText(DeviceInfoActivity.this, "DfuCompleted!", Toast.LENGTH_SHORT).show();
+            ToastUtils.showToast(DeviceInfoActivity.this, "DFU Successfully!");
             dismissDFUProgressDialog();
         }
 
@@ -1000,35 +714,9 @@ public class DeviceInfoActivity extends BaseActivity {
 
         @Override
         public void onError(String deviceAddress, int error, int errorType, String message) {
-            Toast.makeText(DeviceInfoActivity.this, "Error:" + message, Toast.LENGTH_SHORT).show();
+            ToastUtils.showToast(DeviceInfoActivity.this, "Opps!DFU Failed. Please try again!");
             LogModule.i("Error:" + message);
             dismissDFUProgressDialog();
-        }
-    };
-
-    private final DfuLogListener mDfuLogListener = new DfuLogListener() {
-        @Override
-        public void onLogEvent(String deviceAddress, int level, String message) {
-            switch (level) {
-                case DfuService.LOG_LEVEL_APPLICATION:
-                    LogModule.w(level + ":" + message);
-                    break;
-                case DfuService.LOG_LEVEL_VERBOSE:
-                    LogModule.w(level + ":" + message);
-                    break;
-                case DfuService.LOG_LEVEL_DEBUG:
-                    LogModule.w(level + ":" + message);
-                    break;
-                case DfuService.LOG_LEVEL_INFO:
-                    LogModule.w(level + ":" + message);
-                    break;
-                case DfuService.LOG_LEVEL_WARNING:
-                    LogModule.w(level + ":" + message);
-                    break;
-                case DfuService.LOG_LEVEL_ERROR:
-                    LogModule.w(level + ":" + message);
-                    break;
-            }
         }
     };
 }

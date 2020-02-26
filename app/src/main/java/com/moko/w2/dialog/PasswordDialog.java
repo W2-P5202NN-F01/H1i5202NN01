@@ -8,22 +8,16 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
+
 import com.moko.w2.R;
 import com.moko.w2.utils.ToastUtils;
 
 import butterknife.Bind;
 import butterknife.OnClick;
 
-/**
- * @Date 2017/12/11 0011
- * @Author wenzheng.liu
- * @Description
- * @ClassPath com.moko.w2.dialog.PasswordDialog
- */
-public class    PasswordDialog extends BaseDialog {
+public class PasswordDialog extends BaseDialog<String> {
     @Bind(R.id.et_password)
     EditText etPassword;
-    private String savedPassword;
     private final String FILTER_ASCII = "\\A\\p{ASCII}*\\z";
 
     public PasswordDialog(Context context) {
@@ -36,7 +30,7 @@ public class    PasswordDialog extends BaseDialog {
     }
 
     @Override
-    protected void renderConvertView(View convertView, Object o) {
+    protected void renderConvertView(View convertView, String password) {
         InputFilter filter = new InputFilter() {
             @Override
             public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
@@ -47,10 +41,10 @@ public class    PasswordDialog extends BaseDialog {
                 return null;
             }
         };
-        etPassword.setFilters(new InputFilter[]{new InputFilter.LengthFilter(8), filter});
-        if (!TextUtils.isEmpty(savedPassword)) {
-            etPassword.setText(savedPassword);
-            etPassword.setSelection(savedPassword.length());
+        etPassword.setFilters(new InputFilter[]{new InputFilter.LengthFilter(16), filter});
+        if (!TextUtils.isEmpty(password)) {
+            etPassword.setText(password);
+            etPassword.setSelection(password.length());
         }
     }
 
@@ -59,7 +53,9 @@ public class    PasswordDialog extends BaseDialog {
         switch (view.getId()) {
             case R.id.tv_password_cancel:
                 dismiss();
-                passwordClickListener.onDismiss();
+                if (passwordClickListener != null) {
+                    passwordClickListener.onDismiss();
+                }
                 break;
             case R.id.tv_password_ensure:
                 dismiss();
@@ -67,11 +63,8 @@ public class    PasswordDialog extends BaseDialog {
                     ToastUtils.showToast(getContext(), getContext().getString(R.string.main_password_null));
                     return;
                 }
-                if (etPassword.getText().toString().length() != 8) {
-                    ToastUtils.showToast(getContext(), getContext().getString(R.string.main_password_length));
-                    return;
-                }
-                passwordClickListener.onEnsureClicked(etPassword.getText().toString());
+                if (passwordClickListener != null)
+                    passwordClickListener.onEnsureClicked(etPassword.getText().toString());
                 break;
         }
     }
@@ -80,10 +73,6 @@ public class    PasswordDialog extends BaseDialog {
 
     public void setOnPasswordClicked(PasswordClickListener passwordClickListener) {
         this.passwordClickListener = passwordClickListener;
-    }
-
-    public void setSavedPassword(String savedPassword) {
-        this.savedPassword = savedPassword;
     }
 
     public interface PasswordClickListener {

@@ -1,0 +1,242 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white_ffffff"
+    android:orientation="vertical"
+    android:paddingLeft="15dp"
+    android:paddingRight="15dp">
+
+    <RelativeLayout
+        android:id="@+id/rl_pid"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="PID"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tv_pid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_uuid"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="UUID"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tv_uuid"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_tx_power"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="Tx Power"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tv_tx_power"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_adv_interval"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="adv interval"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tv_adv_interval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+
+    <RelativeLayout
+        android:id="@+id/rl_password"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="Change Password"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_reset_facotry"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="Factory Reset"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_update_firmware"
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="Update Firmware"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:drawableRight="@drawable/arrow_right"
+            android:drawablePadding="10dp"
+            android:text=""
+            android:textColor="@color/grey_666666"
+            android:textSize="14sp" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="50dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:text="Power Off"
+            android:textColor="@color/black_333333"
+            android:textSize="15sp" />
+
+        <ImageView
+            android:id="@+id/iv_power"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/connectable_checked" />
+
+        <View
+            style="@style/divider_line"
+            android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+
+</LinearLayout>

@@ -18,14 +18,14 @@ import butterknife.ButterKnife;
  * @Date 2017/12/11 0011
  * @Author wenzheng.liu
  * @Description
- * @ClassPath com.moko.w2.dialog.BaseDialog
+ * @ClassPath com.moko.beacon.dialog.BaseDialog
  */
 public abstract class BaseDialog<T> extends Dialog {
     protected T t;
     private boolean dismissEnable;
     private Animation animation;
 
-    protected BaseDialog(Context context) {
+    public BaseDialog(Context context) {
         super(context, R.style.BaseDialogTheme);
     }
 

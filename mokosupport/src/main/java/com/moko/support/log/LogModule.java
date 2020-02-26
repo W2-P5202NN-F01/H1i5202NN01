@@ -21,8 +21,8 @@ import java.io.File;
  * @ClassPath com.moko.support.log.LogModule
  */
 public class LogModule {
-    private static final String TAG = "mokoLog";
-    private static final String LOG_FOLDER = "mokoSupport";
+    private static final String TAG = "w2Log";
+    private static final String LOG_FOLDER = "H1i5202NN01";
     private static String PATH_LOGCAT;
 
     public static void init(Context context) {

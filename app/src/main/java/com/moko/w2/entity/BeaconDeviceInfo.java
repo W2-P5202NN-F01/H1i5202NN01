@@ -12,7 +12,7 @@ public class BeaconDeviceInfo implements Serializable{
     // 软件版本
     public String softVersion;
     // 制造商
-    public String firmname;
+    public String manufacturer;
     // 产品型号
     public String deviceName;
     // 生产日期
@@ -32,7 +32,7 @@ public class BeaconDeviceInfo implements Serializable{
     public String toString() {
         return "BeaconDeviceInfo{" +
                 "softVersion='" + softVersion + '\'' +
-                ", firmname='" + firmname + '\'' +
+                ", manufacturer='" + manufacturer + '\'' +
                 ", deviceName='" + deviceName + '\'' +
                 ", iBeaconDate='" + iBeaconDate + '\'' +
                 ", iBeaconMac='" + iBeaconMac + '\'' +

@@ -34,80 +34,9 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan" />
         <activity
-            android:name="com.moko.w2.activity.SystemInfoActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
             android:name="com.moko.w2.activity.AboutActivity"
             android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
 
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetUUIDActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetMajorActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetMinorActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetMeasurePowerActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetTransmissionActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetBroadcastIntervalActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetDeviceIdActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetIBeaconNameActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetConnectionModeActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetPasswordActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetAdvPeriodActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetWakeUpIntervalActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name="com.moko.w2.activity.SetSleepDurationActivity"
-            android:configChanges="orientation|mcc|mnc|keyboard|keyboardHidden|locale|touchscreen|navigation|fontScale|layoutDirection"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustPan" />
 

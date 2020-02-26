@@ -20,9 +20,10 @@ import java.util.List;
 public class MokoCharacteristicHandler {
     private static MokoCharacteristicHandler INSTANCE;
 
-    public static final String SERVICE_UUID_HEADER_BATTERY = "0000180f";
-    public static final String SERVICE_UUID_HEADER_SYSTEM = "0000180a";
-    public static final String SERVICE_UUID_HEADER_PARAMS = "0000ff00";
+    public static final String SERVICE_UUID_HEADER_DEVICE = "0000180a";
+    public static final String SERVICE_UUID_HEADER_NOTIFY = "e62a0001";
+    public static final String SERVICE_UUID_HEADER_EDDYSTONE = "a3c87500";
+
     public HashMap<OrderType, MokoCharacteristic> mokoCharacteristicMap;
 
     private MokoCharacteristicHandler() {
@@ -51,11 +52,56 @@ public class MokoCharacteristicHandler {
             if (TextUtils.isEmpty(serviceUuid)) {
                 continue;
             }
+            if (serviceUuid.startsWith("00001800")||serviceUuid.startsWith("00001801")) {
+                continue;
+            }
             List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
-            if (serviceUuid.startsWith(SERVICE_UUID_HEADER_BATTERY)) {
+            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_DEVICE)) {
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
                     String characteristicUuid = characteristic.getUuid().toString();
                     if (TextUtils.isEmpty(characteristicUuid)) {
+                        continue;
+                    }
+
+                    if (characteristicUuid.equals(OrderType.manufacturer.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.manufacturer, new MokoCharacteristic(characteristic, OrderType.manufacturer));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.productModel.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.productModel, new MokoCharacteristic(characteristic, OrderType.productModel));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.manufactureDate.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.manufactureDate, new MokoCharacteristic(characteristic, OrderType.manufactureDate));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.hardwareVersion.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.hardwareVersion, new MokoCharacteristic(characteristic, OrderType.hardwareVersion));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.firmwareVersion.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.firmwareVersion, new MokoCharacteristic(characteristic, OrderType.firmwareVersion));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.softwareVersion.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.softwareVersion, new MokoCharacteristic(characteristic, OrderType.softwareVersion));
+                        continue;
+                    }
+                }
+            }
+            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_NOTIFY)) {
+                for (BluetoothGattCharacteristic characteristic : characteristics) {
+                    String characteristicUuid = characteristic.getUuid().toString();
+                    if (TextUtils.isEmpty(characteristicUuid)) {
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.notifyConfig.getUuid())) {
+                        gatt.setCharacteristicNotification(characteristic, true);
+                        mokoCharacteristicMap.put(OrderType.notifyConfig, new MokoCharacteristic(characteristic, OrderType.notifyConfig));
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.writeConfig.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.writeConfig, new MokoCharacteristic(characteristic, OrderType.writeConfig));
                         continue;
                     }
                     if (characteristicUuid.equals(OrderType.battery.getUuid())) {
@@ -64,120 +110,34 @@ public class MokoCharacteristicHandler {
                     }
                 }
             }
-            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_SYSTEM)) {
+            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_EDDYSTONE)) {
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
                     String characteristicUuid = characteristic.getUuid().toString();
                     if (TextUtils.isEmpty(characteristicUuid)) {
                         continue;
                     }
-                    // 软件版本
-                    if (characteristicUuid.equals(OrderType.softVersion.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.softVersion, new MokoCharacteristic(characteristic, OrderType.softVersion));
+                    if (characteristicUuid.equals(OrderType.advInterval.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.advInterval, new MokoCharacteristic(characteristic, OrderType.advInterval));
                         continue;
                     }
-                    // 厂商名称
-                    if (characteristicUuid.equals(OrderType.firmname.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.firmname, new MokoCharacteristic(characteristic, OrderType.firmname));
+                    if (characteristicUuid.equals(OrderType.radioTxPower.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.radioTxPower, new MokoCharacteristic(characteristic, OrderType.radioTxPower));
                         continue;
                     }
-                    // 设备名称
-                    if (characteristicUuid.equals(OrderType.devicename.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.devicename, new MokoCharacteristic(characteristic, OrderType.devicename));
+                    if (characteristicUuid.equals(OrderType.lockState.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.lockState, new MokoCharacteristic(characteristic, OrderType.lockState));
                         continue;
                     }
-                    // 出厂日期
-                    if (characteristicUuid.equals(OrderType.iBeaconDate.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.iBeaconDate, new MokoCharacteristic(characteristic, OrderType.iBeaconDate));
+                    if (characteristicUuid.equals(OrderType.unLock.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.unLock, new MokoCharacteristic(characteristic, OrderType.unLock));
                         continue;
                     }
-                    // 硬件版本号
-                    if (characteristicUuid.equals(OrderType.hardwareVersion.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.hardwareVersion, new MokoCharacteristic(characteristic, OrderType.hardwareVersion));
+                    if (characteristicUuid.equals(OrderType.advSlotData.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.advSlotData, new MokoCharacteristic(characteristic, OrderType.advSlotData));
                         continue;
                     }
-                    // 固件版本号
-                    if (characteristicUuid.equals(OrderType.firmwareVersion.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.firmwareVersion, new MokoCharacteristic(characteristic, OrderType.firmwareVersion));
-                        continue;
-                    }
-                }
-            }
-            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_PARAMS)) {
-                for (BluetoothGattCharacteristic characteristic : characteristics) {
-                    String characteristicUuid = characteristic.getUuid().toString();
-                    if (TextUtils.isEmpty(characteristicUuid)) {
-                        continue;
-                    }
-                    // 写和通知
-                    if (characteristicUuid.equals(OrderType.writeAndNotify.getUuid())) {
-                        gatt.setCharacteristicNotification(characteristic, true);
-                        mokoCharacteristicMap.put(OrderType.writeAndNotify, new MokoCharacteristic(characteristic, OrderType.writeAndNotify));
-                        continue;
-                    }
-                    // uuid
-                    if (characteristicUuid.equals(OrderType.iBeaconUuid.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.iBeaconUuid, new MokoCharacteristic(characteristic, OrderType.iBeaconUuid));
-                        continue;
-                    }
-                    // major
-                    if (characteristicUuid.equals(OrderType.major.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.major, new MokoCharacteristic(characteristic, OrderType.major));
-                        continue;
-                    }
-                    // minor
-                    if (characteristicUuid.equals(OrderType.minor.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.minor, new MokoCharacteristic(characteristic, OrderType.minor));
-                        continue;
-                    }
-                    // measure_power
-                    if (characteristicUuid.equals(OrderType.measurePower.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.measurePower, new MokoCharacteristic(characteristic, OrderType.measurePower));
-                        continue;
-                    }
-                    // transmission
-                    if (characteristicUuid.equals(OrderType.transmission.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.transmission, new MokoCharacteristic(characteristic, OrderType.transmission));
-                        continue;
-                    }
-                    // change_password
-                    if (characteristicUuid.equals(OrderType.changePassword.getUuid())) {
-                        gatt.setCharacteristicNotification(characteristic, true);
-                        mokoCharacteristicMap.put(OrderType.changePassword, new MokoCharacteristic(characteristic, OrderType.changePassword));
-                        continue;
-                    }
-                    // broadcasting_interval
-                    if (characteristicUuid.equals(OrderType.broadcastingInterval.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.broadcastingInterval, new MokoCharacteristic(characteristic, OrderType.broadcastingInterval));
-                        continue;
-                    }
-                    // serial_id
-                    if (characteristicUuid.equals(OrderType.serialID.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.serialID, new MokoCharacteristic(characteristic, OrderType.serialID));
-                        continue;
-                    }
-                    // iBeacon_name
-                    if (characteristicUuid.equals(OrderType.iBeaconName.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.iBeaconName, new MokoCharacteristic(characteristic, OrderType.iBeaconName));
-                        continue;
-                    }
-                    // connection_mode
-                    if (characteristicUuid.equals(OrderType.connectionMode.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.connectionMode, new MokoCharacteristic(characteristic, OrderType.connectionMode));
-                        continue;
-                    }
-                    // soft_reboot
-                    if (characteristicUuid.equals(OrderType.softReboot.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.softReboot, new MokoCharacteristic(characteristic, OrderType.softReboot));
-                        continue;
-                    }
-                    // iBeacon_mac
-                    if (characteristicUuid.equals(OrderType.iBeaconMac.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.iBeaconMac, new MokoCharacteristic(characteristic, OrderType.iBeaconMac));
-                        continue;
-                    }
-                    // overtime
-                    if (characteristicUuid.equals(OrderType.overtime.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.overtime, new MokoCharacteristic(characteristic, OrderType.overtime));
+                    if (characteristicUuid.equals(OrderType.resetDevice.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.resetDevice, new MokoCharacteristic(characteristic, OrderType.resetDevice));
                         continue;
                     }
                 }

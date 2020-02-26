@@ -14,7 +14,6 @@ public class DeviceInfo implements Serializable {
     public String name;
     public int rssi;
     public String mac;
-    public String scanRecord;
     public ScanResult scanResult;
 
     @Override
@@ -23,7 +22,7 @@ public class DeviceInfo implements Serializable {
                 "name='" + name + '\'' +
                 ", rssi=" + rssi +
                 ", mac='" + mac + '\'' +
-                ", scanRecord='" + scanRecord + '\'' +
+                ", scanRecord='" + scanResult.toString() + '\'' +
                 '}';
     }
 }
