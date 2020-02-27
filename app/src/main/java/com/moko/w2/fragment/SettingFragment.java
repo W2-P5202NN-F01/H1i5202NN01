@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -40,6 +41,8 @@ public class SettingFragment extends Fragment {
     TextView tvTxPower;
     @Bind(R.id.tv_adv_interval)
     TextView tvAdvInterval;
+    @Bind(R.id.iv_power)
+    ImageView ivPower;
 
     private DeviceInfoActivity activity;
 
@@ -151,6 +154,7 @@ public class SettingFragment extends Fragment {
                 break;
             case R.id.rl_tx_power:
                 final TxPowerDialog txPowerDialog = new TxPowerDialog(getActivity());
+                txPowerDialog.setData(txPower);
                 txPowerDialog.setOnTxPowerClicked(new TxPowerDialog.TxPowerClickListener() {
                     @Override
                     public void onEnsureClicked(int txPower) {
@@ -162,6 +166,7 @@ public class SettingFragment extends Fragment {
                 break;
             case R.id.rl_adv_interval:
                 final AdvIntervalDialog advIntervalDialog = new AdvIntervalDialog(getActivity());
+                advIntervalDialog.setData(advInterval);
                 advIntervalDialog.setOnAdvIntervalClicked(new AdvIntervalDialog.AdvIntervalClickListener() {
                     @Override
                     public void onEnsureClicked(int advInterval) {
@@ -170,19 +175,6 @@ public class SettingFragment extends Fragment {
                     }
                 });
                 advIntervalDialog.show();
-                Timer advIntervalTimer = new Timer();
-                advIntervalTimer.schedule(new TimerTask() {
-
-                    @Override
-                    public void run() {
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                advIntervalDialog.showKeyboard();
-                            }
-                        });
-                    }
-                }, 200);
                 break;
             case R.id.rl_password:
                 final ModifyPasswordDialog modifyPasswordDialog = new ModifyPasswordDialog(activity);
@@ -243,11 +235,21 @@ public class SettingFragment extends Fragment {
         tvUuid.setText(uuid);
     }
 
-    public void setTxPower(String txPower) {
-        tvTxPower.setText(txPower);
+    public void setClose() {
+        ivPower.setImageResource(R.drawable.connectable_unchecked);
     }
 
-    public void setAdvInterval(String advInterval) {
-        tvAdvInterval.setText(advInterval);
+    private int txPower;
+
+    public void setTxPower(int txPower) {
+        this.txPower = txPower;
+        tvTxPower.setText(String.format("%ddBm", txPower));
+    }
+
+    private int advInterval;
+
+    public void setAdvInterval(int advInterval) {
+        this.advInterval = advInterval;
+        tvAdvInterval.setText(String.format("%dms", advInterval));
     }
 }

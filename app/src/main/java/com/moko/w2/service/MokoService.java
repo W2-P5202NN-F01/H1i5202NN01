@@ -211,6 +211,12 @@ public class MokoService extends Service implements MokoConnStateCallback, MokoO
         return writeConfigTask;
     }
 
+    public OrderTask getRunningTime() {
+        WriteConfigTask writeConfigTask = new WriteConfigTask(this);
+        writeConfigTask.setData(ConfigKeyEnum.GET_RUNNING_TIME);
+        return writeConfigTask;
+    }
+
     public OrderTask getProductModel() {
         ProductModelTask deviceModelTask = new ProductModelTask(this);
         return deviceModelTask;
@@ -334,7 +340,7 @@ public class MokoService extends Service implements MokoConnStateCallback, MokoO
         return notifyConfigTask;
     }
 
-    public OrderTask closeDevice() {
+    public OrderTask setClose() {
         WriteConfigTask writeConfigTask = new WriteConfigTask(this);
         writeConfigTask.setData(ConfigKeyEnum.SET_CLOSE);
         return writeConfigTask;

@@ -20,38 +20,27 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="5dp">
 
-            <EditText
-                android:id="@+id/et_adv_interval"
+            <SeekBar
+                android:id="@+id/sb_adv_interval"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_toLeftOf="@+id/tv_adv_interval"
                 android:layout_weight="1.0"
-                android:focusable="true"
-                android:hint="Min:100ms Max:10s"
-                android:inputType="number"
-                android:maxLength="3"
-                android:singleLine="true"
-                android:text=""
-                android:textSize="12sp" />
+                android:max="7"
+                android:progress="0" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@id/tv_adv_interval"
+                android:layout_width="70dp"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="5dp"
-                android:text="x100ms"
-                android:textSize="12sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="(1~100)"
-                android:textColor="@color/grey_b3b3b3"
-                android:textSize="12sp" />
-
-
+                android:layout_marginTop="15dp"
+                android:gravity="right"
+                android:text="20ms"
+                android:textSize="15sp" />
         </LinearLayout>
 
         <View

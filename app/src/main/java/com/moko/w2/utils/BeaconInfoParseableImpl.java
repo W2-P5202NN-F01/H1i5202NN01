@@ -7,7 +7,7 @@ import com.moko.support.entity.DeviceInfo;
 import com.moko.support.service.DeviceInfoParseable;
 import com.moko.w2.entity.BeaconInfo;
 
-import java.util.Map;
+import java.util.List;
 
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
 
@@ -25,21 +25,21 @@ public class BeaconInfoParseableImpl implements DeviceInfoParseable<BeaconInfo> 
         byte[] scanRecordBytes = result.getScanRecord().getBytes();
         if (0x11 != (scanRecordBytes[3] & 0xFF) || 0x07 != (scanRecordBytes[4] & 0xFF))
             return null;
-        Map<ParcelUuid, byte[]> map = result.getScanRecord().getServiceData();
-        if (map == null || map.isEmpty()) {
+        List<ParcelUuid> uuids = result.getScanRecord().getServiceUuids();
+        if (uuids == null || uuids.isEmpty()) {
             return null;
         }
-        String serviceDataUuid = null;
-        for (ParcelUuid uuid : map.keySet()) {
-            serviceDataUuid = uuid.getUuid().toString();
+        String serviceUuid = null;
+        for (ParcelUuid uuid : uuids) {
+            serviceUuid = uuid.getUuid().toString();
+            if (TextUtils.isEmpty(serviceUuid))
+                continue;
             break;
         }
-        if (TextUtils.isEmpty(serviceDataUuid))
-            return null;
         BeaconInfo beaconInfo = new BeaconInfo();
         beaconInfo.pid = deviceInfo.name;
         beaconInfo.rssi = deviceInfo.rssi;
-        beaconInfo.uuid = serviceDataUuid;
+        beaconInfo.uuid = serviceUuid;
         beaconInfo.mac = deviceInfo.mac;
         return beaconInfo;
     }

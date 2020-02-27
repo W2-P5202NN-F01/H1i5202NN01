@@ -28,6 +28,7 @@ public class WriteConfigTask extends OrderTask {
         switch (key) {
             case GET_DEVICE_MAC:
             case SET_CLOSE:
+            case GET_RUNNING_TIME:
                 createGetConfigData(key.getConfigKey());
                 break;
         }

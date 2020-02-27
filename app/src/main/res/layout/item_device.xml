@@ -36,7 +36,6 @@
             android:layout_alignBaseline="@id/tv_device_rssi"
             android:layout_alignParentLeft="true"
             android:layout_toLeftOf="@id/tv_connect"
-            android:singleLine="true"
             android:text="UUID:"
             android:textColor="@color/black_333333"
             android:textSize="14sp" />

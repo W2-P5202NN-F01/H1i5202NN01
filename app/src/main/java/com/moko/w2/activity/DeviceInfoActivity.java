@@ -148,7 +148,8 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                         mMokoService.getManufacturerDate(),
                         mMokoService.getHardwareVersion(),
                         mMokoService.getFirmwareVersion(),
-                        mMokoService.getSoftwareVersion());
+                        mMokoService.getSoftwareVersion(),
+                        mMokoService.getRunningTime());
             }
         }
 
@@ -218,7 +219,8 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                 mMokoService.getManufacturerDate(),
                 mMokoService.getHardwareVersion(),
                 mMokoService.getFirmwareVersion(),
-                mMokoService.getSoftwareVersion());
+                mMokoService.getSoftwareVersion(),
+                mMokoService.getRunningTime());
     }
 
     private String unLockResponse;
@@ -274,6 +276,13 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                                             validParams.runningTime = "1";
                                         }
                                         break;
+                                    case SET_CLOSE:
+                                        if ("eb260000".equals(MokoUtils.bytesToHexString(value).toLowerCase())) {
+                                            ToastUtils.showToast(DeviceInfoActivity.this, "Success!");
+                                            settingFragment.setClose();
+                                            back();
+                                        }
+                                        break;
                                 }
                             }
                             break;
@@ -302,13 +311,13 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                             validParams.softwareVersion = "1";
                             break;
                         case battery:
-                            deviceFragment.setBattery(value);
+                            deviceFragment.setBattery(value[0]);
                             validParams.battery = "1";
                             break;
                         case advSlotData:
                             if (responseType == OrderTask.RESPONSE_TYPE_READ) {
                                 if (value.length >= 1) {
-                                    int frameType = value[0];
+                                    int frameType = value[0] & 0xff;
                                     SlotFrameTypeEnum slotFrameTypeEnum = SlotFrameTypeEnum.fromFrameType(frameType);
                                     if (slotFrameTypeEnum != null) {
                                         switch (slotFrameTypeEnum) {
@@ -341,7 +350,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                             if (responseType == OrderTask.RESPONSE_TYPE_READ) {
                                 if (value.length >= 1) {
                                     int txPower = value[0];
-                                    settingFragment.setTxPower(String.format("%ddBm", txPower));
+                                    settingFragment.setTxPower(txPower);
                                     validParams.txPower = "1";
                                 }
                             }
@@ -353,7 +362,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                             if (responseType == OrderTask.RESPONSE_TYPE_READ) {
                                 if (value.length >= 2) {
                                     int advInterval = MokoUtils.toInt(value);
-                                    settingFragment.setAdvInterval(String.format("%dms", advInterval));
+                                    settingFragment.setAdvInterval(advInterval);
                                     validParams.advInterval = "1";
                                 }
                             }
@@ -432,7 +441,8 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                                         mMokoService.getManufacturerDate(),
                                         mMokoService.getHardwareVersion(),
                                         mMokoService.getFirmwareVersion(),
-                                        mMokoService.getSoftwareVersion());
+                                        mMokoService.getSoftwareVersion(),
+                                        mMokoService.getRunningTime());
                                 break;
 
                         }
@@ -503,8 +513,8 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
     }
 
     private void back() {
-        MokoSupport.getInstance().disConnectBle();
         mIsClose = false;
+        MokoSupport.getInstance().disConnectBle();
     }
 
     @Override
@@ -566,7 +576,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
     public void setClose() {
         mIsClose = true;
         showSyncingProgressDialog();
-        MokoSupport.getInstance().sendOrder(mMokoService.closeDevice());
+        MokoSupport.getInstance().sendOrder(mMokoService.setClose());
     }
 
     public void setPid(String pid) {
@@ -596,7 +606,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
     public void setAdvInterval(int advInterval) {
         validParams.advInterval = "";
         showSyncingProgressDialog();
-        byte[] advIntervalBytes = MokoUtils.toByteArray(advInterval * 100, 2);
+        byte[] advIntervalBytes = MokoUtils.toByteArray(advInterval, 2);
         MokoSupport.getInstance().sendOrder(mMokoService.setAdvInterval(advIntervalBytes));
     }
 
