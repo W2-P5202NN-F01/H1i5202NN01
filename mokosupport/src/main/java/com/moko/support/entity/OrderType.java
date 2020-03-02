@@ -16,7 +16,7 @@ public enum OrderType implements Serializable {
     firmwareVersion("firmwareVersion", "00002a26-0000-1000-8000-00805f9b34fb"),
     softwareVersion("softwareVersion", "00002a28-0000-1000-8000-00805f9b34fb"),
 
-    battery("battery", "e62a0006-1362-4f28-9327-f5b74e970801"),
+    battery("battery", "00002a19-0000-1000-8000-00805f9b34fb"),
 
     notifyConfig("notifyConfig", "e62a0003-1362-4f28-9327-f5b74e970801"),
     writeConfig("writeConfig", "e62a0002-1362-4f28-9327-f5b74e970801"),

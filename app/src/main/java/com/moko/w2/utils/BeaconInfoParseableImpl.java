@@ -5,8 +5,10 @@ import android.text.TextUtils;
 
 import com.moko.support.entity.DeviceInfo;
 import com.moko.support.service.DeviceInfoParseable;
+import com.moko.support.utils.MokoUtils;
 import com.moko.w2.entity.BeaconInfo;
 
+import java.util.Arrays;
 import java.util.List;
 
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
@@ -36,10 +38,17 @@ public class BeaconInfoParseableImpl implements DeviceInfoParseable<BeaconInfo> 
                 continue;
             break;
         }
+        byte[] uuid = Arrays.copyOfRange(scanRecordBytes, 5, 21);
+        String uuidStr = MokoUtils.bytesToHexString(uuid);
+        StringBuilder stringBuilder = new StringBuilder(uuidStr);
+        stringBuilder.insert(8, "-");
+        stringBuilder.insert(13, "-");
+        stringBuilder.insert(18, "-");
+        stringBuilder.insert(23, "-");
         BeaconInfo beaconInfo = new BeaconInfo();
         beaconInfo.pid = deviceInfo.name;
         beaconInfo.rssi = deviceInfo.rssi;
-        beaconInfo.uuid = serviceUuid;
+        beaconInfo.uuid = stringBuilder.toString().toUpperCase();
         beaconInfo.mac = deviceInfo.mac;
         return beaconInfo;
     }

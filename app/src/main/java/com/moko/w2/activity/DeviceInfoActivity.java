@@ -271,7 +271,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                                         break;
                                     case GET_RUNNING_TIME:
                                         if (value.length >= 7) {
-                                            byte[] runningTime = Arrays.copyOfRange(value, 3, value.length - 1);
+                                            byte[] runningTime = Arrays.copyOfRange(value, 4, value.length);
                                             deviceFragment.setRunningTime(runningTime);
                                             validParams.runningTime = "1";
                                         }
@@ -311,7 +311,7 @@ public class DeviceInfoActivity extends BaseActivity implements RadioGroup.OnChe
                             validParams.softwareVersion = "1";
                             break;
                         case battery:
-                            deviceFragment.setBattery(value[0]);
+                            deviceFragment.setBattery(value);
                             validParams.battery = "1";
                             break;
                         case advSlotData:

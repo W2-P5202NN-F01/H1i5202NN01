@@ -21,6 +21,7 @@ public class MokoCharacteristicHandler {
     private static MokoCharacteristicHandler INSTANCE;
 
     public static final String SERVICE_UUID_HEADER_DEVICE = "0000180a";
+    public static final String SERVICE_UUID_HEADER_BATTERY = "0000180f";
     public static final String SERVICE_UUID_HEADER_NOTIFY = "e62a0001";
     public static final String SERVICE_UUID_HEADER_EDDYSTONE = "a3c87500";
 
@@ -89,6 +90,18 @@ public class MokoCharacteristicHandler {
                     }
                 }
             }
+            if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_BATTERY)) {
+                for (BluetoothGattCharacteristic characteristic : characteristics) {
+                    String characteristicUuid = characteristic.getUuid().toString();
+                    if (TextUtils.isEmpty(characteristicUuid)) {
+                        continue;
+                    }
+                    if (characteristicUuid.equals(OrderType.battery.getUuid())) {
+                        mokoCharacteristicMap.put(OrderType.battery, new MokoCharacteristic(characteristic, OrderType.battery));
+                        continue;
+                    }
+                }
+            }
             if (service.getUuid().toString().startsWith(SERVICE_UUID_HEADER_NOTIFY)) {
                 for (BluetoothGattCharacteristic characteristic : characteristics) {
                     String characteristicUuid = characteristic.getUuid().toString();
@@ -102,10 +115,6 @@ public class MokoCharacteristicHandler {
                     }
                     if (characteristicUuid.equals(OrderType.writeConfig.getUuid())) {
                         mokoCharacteristicMap.put(OrderType.writeConfig, new MokoCharacteristic(characteristic, OrderType.writeConfig));
-                        continue;
-                    }
-                    if (characteristicUuid.equals(OrderType.battery.getUuid())) {
-                        mokoCharacteristicMap.put(OrderType.battery, new MokoCharacteristic(characteristic, OrderType.battery));
                         continue;
                     }
                 }

@@ -119,13 +119,13 @@ public class DeviceFragment extends Fragment {
         tvSoftwareVersion.setText(softwareVersion);
     }
 
-    public void setBattery(byte value) {
-        String battery = (value & 0xff) + "%";
+    public void setBattery(byte[] value) {
+        String battery = MokoUtils.toInt(value) + "%";
         tvSoc.setText(battery);
     }
 
     public void setRunningTime(byte[] value) {
-        String runningTime = Integer.parseInt(MokoUtils.bytesToHexString(value), 16) + "s";
+        String runningTime = MokoUtils.toInt(value) + "s";
         tvRunningTime.setText(runningTime);
     }
 }
