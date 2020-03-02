@@ -1,4 +1,4 @@
-#MK20200102YK1B Android SDK Instruction DOC（English）
+# MK20200102YK1B Android SDK Instruction DOC（English）
 
 
 ## 1. Import project
